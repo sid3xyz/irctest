@@ -4,18 +4,30 @@ The PING and PONG commands
 
 from irctest import cases
 from irctest.numerics import ERR_NEEDMOREPARAMS, ERR_NOORIGIN
-from irctest.patma import ANYSTR
+from irctest.patma import ANYSTR, StrRe
 
 
 class PingPongTestCase(cases.BaseServerTestCase):
     @cases.mark_specifications("Modern")
     def testPing(self):
-        """https://github.com/ircdocs/modern-irc/pull/99"""
+        """https://github.com/ircdocs/modern-irc/pull/99
+
+        PONG must include server prefix per RFC 2812:
+        The response format is: :<server> PONG <server> <token>
+        """
         self.connectClient("foo")
         self.sendLine(1, "PING abcdef")
+        msg = self.getMessage(1)
+        # PONG must have a server prefix (contains a dot, no !)
         self.assertMessageMatch(
-            self.getMessage(1), command="PONG", params=["My.Little.Server", "abcdef"]
+            msg,
+            command="PONG",
+            params=[ANYSTR, "abcdef"],
+            prefix=StrRe(r"[^!]+\.[^!]+"),  # Server prefix: contains dot, no !
         )
+        # First param should match the prefix (server name)
+        self.assertEqual(msg.params[0], msg.prefix,
+            f"PONG first param should match prefix: params={msg.params}, prefix={msg.prefix}")
 
     @cases.mark_specifications("Modern")
     def testPingNoToken(self):
@@ -37,7 +49,13 @@ class PingPongTestCase(cases.BaseServerTestCase):
         self.sendLine(1, "PING :")
         m = self.getMessage(1)
         if m.command == "PONG":
-            self.assertMessageMatch(m, command="PONG", params=["My.Little.Server", ""])
+            # PONG must have server prefix
+            self.assertMessageMatch(
+                m,
+                command="PONG",
+                params=[ANYSTR, ""],
+                prefix=StrRe(r"[^!]+\.[^!]+"),  # Server prefix
+            )
         elif m.command == ERR_NOORIGIN:
             self.assertMessageMatch(m, command=ERR_NOORIGIN, params=["foo", ANYSTR])
         else:

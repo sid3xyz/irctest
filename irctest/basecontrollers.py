@@ -333,8 +333,8 @@ class BaseServerController(_BaseController):
                     raise
 
     def wait_for_services(self) -> None:
-        assert self.services_controller
-        self.services_controller.wait_for_services()
+        if self.services_controller:
+            self.services_controller.wait_for_services()
 
     def terminate(self) -> None:
         if self.services_controller is not None:
