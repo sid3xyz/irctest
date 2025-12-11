@@ -28,6 +28,15 @@ def pytest_addoption(parser):
     parser.addoption(
         "--openssl-bin", type=str, default="openssl", help="The openssl binary to use"
     )
+    parser.addoption(
+        "--skip-deprecated",
+        action="store_true",
+        default=False,
+        help=(
+            "Skip tests marked deprecated. When enabled, also skips Ergo-only tests "
+            "(Ergo-proprietary, non-standard coverage)."
+        ),
+    )
 
 
 def pytest_configure(config):
@@ -82,11 +91,13 @@ def pytest_collection_modifyitems(session, config, items):
     and before actually running the tests.
 
     This function filters out client tests if running with a server controller,
-    and vice versa.
+    and vice versa. It also filters out deprecated tests when running with
+    slircd controller (we focus on modern/future compliance only).
     """
 
     # First, check if we should run server tests or client tests
     server_tests = client_tests = False
+    skip_deprecated = bool(config.getoption("skip_deprecated"))
     if _IrcTestCase.controllerClass is None:
         pass
     elif issubclass(_IrcTestCase.controllerClass, BaseServerController):
@@ -104,6 +115,19 @@ def pytest_collection_modifyitems(session, config, items):
     # Iterate over each of the test functions (they are pytest "Nodes")
     for item in items:
         assert isinstance(item, _pytest.python.Function)
+
+        # Skip deprecated tests when running slircd (modern/future focus only)
+        if skip_deprecated and item.get_closest_marker("deprecated"):
+            continue
+
+        # Skip Ergo-specific tests when running slircd (we test standards, not Ergo emulation)
+        if skip_deprecated and item.get_closest_marker("Ergo"):
+            # Only skip if Ergo is the ONLY specification marker
+            # (i.e., it's an Ergo-proprietary test, not a standard test that Ergo also supports)
+            markers = [m.name for m in item.iter_markers()]
+            standard_markers = {"RFC1459", "RFC2812", "IRCv3", "modern", "ircdocs"}
+            if not any(m in standard_markers for m in markers):
+                continue
 
         # unittest-style test functions have the node of UnitTest class as parent
         if tuple(map(int, _pytest.__version__.split("."))) >= (7,):

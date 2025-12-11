@@ -27,6 +27,7 @@ metrics_port = 0
 
 [listen]
 address = "{bind_address}"
+
 {tls_config}
 
 [database]
@@ -93,9 +94,10 @@ class SlircdController(BaseServerController, DirectoryBasedController):
         if ssl:
             self.gen_ssl()
             tls_config = f"""\
-tls_address = "{hostname}:{port + 1}"
-tls_cert = "{self.pem_path}"
-tls_key = "{self.key_path}"
+[tls]
+address = "{hostname}:{port + 1}"
+cert_path = "{self.pem_path}"
+key_path = "{self.key_path}"
 """
 
         # Password configuration
@@ -139,8 +141,12 @@ custom_account_name = true
             # Try common locations
             workspace_root = Path(__file__).parent.parent.parent.parent
             for path in [
+                workspace_root / "target" / "debug" / "slircd-ng",
+                workspace_root / "target" / "release" / "slircd-ng",
                 workspace_root / "target" / "debug" / "slircd",
                 workspace_root / "target" / "release" / "slircd",
+                Path("/home/straylight/target/debug/slircd-ng"),
+                Path("/home/straylight/target/release/slircd-ng"),
                 Path("/home/straylight/target/debug/slircd"),
                 Path("/home/straylight/target/release/slircd"),
             ]:
