@@ -33,10 +33,6 @@ address = "{bind_address}"
 [database]
 path = ":memory:"
 
-[limits]
-rate = 1000.0
-burst = 1000.0
-
 [security]
 cloak_secret = "test-secret-do-not-use-in-production"
 cloak_suffix = "test"

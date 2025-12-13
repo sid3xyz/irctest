@@ -122,10 +122,11 @@ def pytest_collection_modifyitems(session, config, items):
 
         # Skip Ergo-specific tests when running slircd (we test standards, not Ergo emulation)
         if skip_deprecated and item.get_closest_marker("Ergo"):
-            # Only skip if Ergo is the ONLY specification marker
-            # (i.e., it's an Ergo-proprietary test, not a standard test that Ergo also supports)
+            # Only keep if the test also targets a non-Ergo standard spec.
+            # Note: capability markers imply the IRCv3 marker, so IRCv3 alone is
+            # not sufficient to treat an Ergo-spec test as standards-focused.
             markers = [m.name for m in item.iter_markers()]
-            standard_markers = {"RFC1459", "RFC2812", "IRCv3", "modern", "ircdocs"}
+            standard_markers = {"RFC1459", "RFC2812", "modern", "ircdocs"}
             if not any(m in standard_markers for m in markers):
                 continue
 
